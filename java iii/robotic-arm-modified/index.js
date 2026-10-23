@@ -75,18 +75,34 @@ wrist.add(palm);
 
 
 const fingers = [];
+const tips = [];
 const fingerLengths = [0.8, 1, 1.3, 1.1, 0.7];
 
 for (let i = 0; i < 5; i++) {
 
+    const lowerLength = fingerLengths[i] * 0.6;
+    const upperLength = fingerLengths[i] * 0.4;
+
+    // fingerJoint = nyja ne shpute, tipJoint = nyja e dyte e gishtit
     const fingerJoint = new THREE.Group();
 
-    const finger = new THREE.Mesh(
-        new THREE.BoxGeometry(0.25, fingerLengths[i], 0.25),
+    const lowerFinger = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, lowerLength, 0.25),
         fingerMaterial
     );
-    finger.position.y = fingerLengths[i] / 2;
-    fingerJoint.add(finger);
+    lowerFinger.position.y = lowerLength / 2;
+    fingerJoint.add(lowerFinger);
+
+    const tipJoint = new THREE.Group();
+    tipJoint.position.y = lowerLength;
+    fingerJoint.add(tipJoint);
+
+    const upperFinger = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, upperLength, 0.22),
+        fingerMaterial
+    );
+    upperFinger.position.y = upperLength / 2;
+    tipJoint.add(upperFinger);
 
     if (i === 0) {
         // gishti i madh, ne anen e majte te shputes
@@ -100,6 +116,7 @@ for (let i = 0; i < 5; i++) {
 
     palm.add(fingerJoint);
     fingers.push(fingerJoint);
+    tips.push(tipJoint);
 }
 
 
@@ -163,6 +180,20 @@ elbow.rotation.z = THREE.MathUtils.degToRad(40);
 wrist.rotation.z = THREE.MathUtils.degToRad(-20);
 
 const rotationStep = THREE.MathUtils.degToRad(5);
+const maxBend = THREE.MathUtils.degToRad(90);
+const bends = [0, 0, 0, 0, 0];
+
+function updateFinger(i) {
+    const b = bends[i];
+    if (i === 0) {
+        // gishti i madh perkulet nga ana drejt gishtave
+        fingers[0].rotation.z = THREE.MathUtils.degToRad(60) - b * 0.6;
+        tips[0].rotation.z = -b * 0.4;
+    } else {
+        fingers[i].rotation.x = b;
+        tips[i].rotation.x = b * 0.8;
+    }
+}
 
 window.addEventListener('keydown', function(event) {
 
@@ -192,14 +223,18 @@ window.addEventListener('keydown', function(event) {
         wrist.rotation.z -= rotationStep;
     }
 
-    // tastet 1-5 i perkulin gishtat, tasti 0 i drejton te gjithe
-    if (key >= '1' && key <= '5') {
-        fingers[Number(key) - 1].rotation.x += rotationStep;
+    // tastet 1-5 i perkulin gishtat (me Shift i drejton), tasti 0 i drejton te gjithe
+    if (event.code >= 'Digit1' && event.code <= 'Digit5') {
+        const i = Number(event.code.slice(5)) - 1;
+        const direction = event.shiftKey ? -1 : 1;
+        bends[i] = THREE.MathUtils.clamp(bends[i] + direction * rotationStep, 0, maxBend);
+        updateFinger(i);
     }
 
     if (key === '0') {
-        for (let i = 0; i < fingers.length; i++) {
-            fingers[i].rotation.x = 0;
+        for (let i = 0; i < 5; i++) {
+            bends[i] = 0;
+            updateFinger(i);
         }
     }
 
