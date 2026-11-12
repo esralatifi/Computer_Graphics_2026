@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// ---------- Scene, camera, renderer ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x25282b);
 
@@ -27,20 +26,18 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ---------- Room size ----------
-const W = 2.5;   // half of the room, so the room is 5 x 5 meters
-const H = 2.8;   // wall height
+// room is 5 x 5 m
+const W = 2.5;
+const H = 2.8;
 
-// ---------- Lights (indoor, calm) ----------
+// lights
 scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 scene.add(new THREE.HemisphereLight(0xdfe6ee, 0x6b5f55, 0.45));
 
-// weak fill light from the front so nothing is pitch black
 const fill = new THREE.DirectionalLight(0xcfd8e3, 0.5);
 fill.position.set(3, 5, 5);
 scene.add(fill);
 
-// main light: warm, hangs in the chandelier at the center of the room
 const mainLight = new THREE.PointLight(0xffd9a8, 40, 12, 2);
 mainLight.position.set(0, 1.95, 0);
 mainLight.castShadow = true;
@@ -48,7 +45,7 @@ mainLight.shadow.mapSize.set(1024, 1024);
 mainLight.shadow.bias = -0.0008;
 scene.add(mainLight);
 
-// ---------- Textures made in code (no download needed) ----------
+// textures
 function makeTileTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 1024;
@@ -56,7 +53,6 @@ function makeTileTexture() {
   const n = 8;
   const s = c.width / n;
 
-  // checkered tiles, dark and light, each a bit different
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       const dark = (i + j) % 2 === 0;
@@ -66,7 +62,6 @@ function makeTileTexture() {
     }
   }
 
-  // dirt patches
   for (let i = 0; i < 30; i++) {
     const x = Math.random() * c.width;
     const y = Math.random() * c.height;
@@ -78,7 +73,6 @@ function makeTileTexture() {
     g.fillRect(x - r, y - r, r * 2, r * 2);
   }
 
-  // scratches
   for (let i = 0; i < 40; i++) {
     const x = Math.random() * c.width;
     const y = Math.random() * c.height;
@@ -90,7 +84,6 @@ function makeTileTexture() {
     g.stroke();
   }
 
-  // grout lines between tiles
   g.strokeStyle = 'rgba(25, 25, 22, 0.85)';
   g.lineWidth = 4;
   for (let k = 0; k <= n; k++) {
@@ -114,7 +107,6 @@ function makeConcreteTexture() {
   g.fillStyle = '#8e8e8a';
   g.fillRect(0, 0, c.width, c.height);
 
-  // big soft light and dark patches
   for (let i = 0; i < 40; i++) {
     const x = Math.random() * c.width;
     const y = Math.random() * c.height;
@@ -127,7 +119,6 @@ function makeConcreteTexture() {
     g.fillRect(x - r, y - r, r * 2, r * 2);
   }
 
-  // small speckles
   for (let i = 0; i < 8000; i++) {
     const v = Math.random() < 0.5 ? 40 : 220;
     g.fillStyle = `rgba(${v}, ${v}, ${v}, ${0.08 + Math.random() * 0.12})`;
@@ -142,7 +133,7 @@ function makeConcreteTexture() {
   return tex;
 }
 
-// ---------- Room: tiled floor, concrete walls ----------
+// floor and walls
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(W * 2, W * 2),
   new THREE.MeshStandardMaterial({ map: makeTileTexture(), roughness: 0.7 })
@@ -164,13 +155,7 @@ leftWall.rotation.y = Math.PI / 2;
 leftWall.receiveShadow = true;
 scene.add(leftWall);
 
-// ---------- Helper to load any model ----------
-// height  = wanted height in meters (for furniture)
-// maxSize = wanted size of the biggest side (for small props)
-// x, z    = position on the floor, y = height above the floor
-// rotY    = rotation around the vertical axis, in radians
-// shadow  = false if the model should not cast shadows
-// tint    = a color (like 0x2f80a8) to repaint the whole model
+// loads a model, scales it, moves it and rotates it
 const loader = new GLTFLoader();
 
 async function addModel(folder, { height, maxSize, x = 0, z = 0, y = 0, rotY = 0, shadow = true, tint }) {
@@ -212,15 +197,12 @@ async function addModel(folder, { height, maxSize, x = 0, z = 0, y = 0, rotY = 0
   return { group, size: box.getSize(new THREE.Vector3()) };
 }
 
-// ---------- Build the scene ----------
 async function build() {
-  // ===== LEFT WALL: stove, tool cart and cabinet, centered along the wall =====
+  // left wall
   const stove = await addModel('electric_stove_1k.gltf', { height: 0.9, rotY: Math.PI / 2 });
   const cart = await addModel('tool_cart_1k.gltf', { height: 0.8, rotY: Math.PI / 2 });
   const cab = await addModel('painted_wooden_cabinet_1k.gltf', { height: 1.1, rotY: Math.PI / 2 });
 
-  // total length of the three along the wall, then start so the group is centered
-  // (the + 0.2 shifts the whole group a little toward the back; change it to move it)
   const gap = 0.08;
   const total = stove.size.x + cart.size.x + cab.size.x + gap * 2;
   const startZ = -total / 2 - 0.2;
@@ -237,16 +219,15 @@ async function build() {
   const cabZ = startZ + stove.size.x + gap + cart.size.x + gap + cab.size.x / 2;
   cab.group.position.set(cabX, 0, cabZ);
 
-  // things on the tool cart (top is at y = 0.8) and on the cabinet (top is at y = 1.1)
   await Promise.all([
     addModel('vintage_spacecraft_instrument_1k.gltf', { maxSize: 0.45, x: cartX, z: cartZ - cart.size.x * 0.2, y: 0.8, rotY: Math.PI / 2 - 0.4 }),
     addModel('long_life_food_1k.gltf', { maxSize: 0.3, x: cartX, z: cartZ + cart.size.x * 0.22, y: 0.8, rotY: 0.5 }),
     addModel('boombox_1k.gltf', { maxSize: 0.5, x: cabX, z: cabZ, y: 1.1, rotY: Math.PI / 2 + 0.2 }),
   ]);
 
-  // ===== BACK WALL: day bed in the middle, facing us, coffee table in front, crate on its right =====
+  // back wall
   const bed = await addModel('vintage_day_bed_1k.gltf', { height: 0.8 });
-  const bedX = 0.1;   // 0 is the exact middle of the back wall
+  const bedX = 0.1;
   const bedZ = -W + bed.size.z / 2 + 0.03;
   bed.group.position.set(bedX, 0, bedZ);
 
@@ -254,20 +235,18 @@ async function build() {
   const coffeeZ = bedZ + bed.size.z / 2 + 0.35 + coffee.size.z / 2;
   coffee.group.position.set(bedX, 0, coffeeZ);
 
-  // things on the coffee table (top is at y = 0.45)
   await Promise.all([
     addModel('concrete_cat_statue_1k.gltf', { height: 0.5, x: bedX - coffee.size.x * 0.28, z: coffeeZ - coffee.size.z * 0.05, y: 0.45, rotY: 0.8 }),
     addModel('cigarette_pack_1k.gltf', { maxSize: 0.18, x: bedX + coffee.size.x * 0.25, z: coffeeZ + coffee.size.z * 0.15, y: 0.45, rotY: 0.6 }),
     addModel('pocket_watch_1k.gltf', { maxSize: 0.14, x: bedX + coffee.size.x * 0.02, z: coffeeZ - coffee.size.z * 0.1, y: 0.45, rotY: 1.2 }),
   ]);
 
-  // wooden crate on the right side of the day bed
   const crate = await addModel('wooden_crate_01_1k.gltf', { height: 0.55, rotY: 0.3 });
   const crateX = bedX + bed.size.x / 2 + 0.25 + crate.size.x / 2;
   const crateZ = -W + crate.size.z / 2 + 0.2;
   crate.group.position.set(crateX, 0, crateZ);
 
-  // ===== TABLE + 4 CHAIRS =====
+  // table and chairs
   const tx = 0.6;
   const tz = 0.5;
   const table = await addModel('painted_wooden_table_1k.gltf', { height: 0.75, x: tx, z: tz });
@@ -276,28 +255,23 @@ async function build() {
   const chairName = 'painted_wooden_chair_02_1k.gltf';
 
   await Promise.all([
-    // chairs are slightly turned and pulled out or pushed in, so it looks natural
     addModel(chairName, { height: 0.9, x: tx + 0.2,       z: tz + dz + 0.12, rotY: Math.PI + 0.15 }),
     addModel(chairName, { height: 0.9, x: tx - 0.25,      z: tz - dz + 0.15, rotY: -0.3 }),
     addModel(chairName, { height: 0.9, x: tx + dx + 0.05, z: tz - 0.1,       rotY: -Math.PI / 2 + 0.25 }),
     addModel(chairName, { height: 0.9, x: tx - dx - 0.45, z: tz + 0.35,      rotY: Math.PI / 2 + 0.8 }),
 
-    // on the table (top is at y = 0.75)
     addModel('vintage_oil_lamp_1k.gltf', { maxSize: 0.45, x: tx + table.size.x * 0.2, z: tz, y: 0.75 }),
     addModel('ceramic_pot_1k.gltf', { maxSize: 0.38, x: tx - table.size.x * 0.25, z: tz + table.size.z * 0.15, y: 0.75 }),
 
-    // big chandelier in the center of the room, no shadow so it does not block its own light
     addModel('Chandelier_02_1k.gltf', { height: 0.9, x: 0, z: 0, y: 1.85, shadow: false }),
   ]);
 
-  // small warm glow from the oil lamp
   const lampLight = new THREE.PointLight(0xffb870, 6, 3, 2);
   lampLight.position.set(tx + table.size.x * 0.2, 1.1, tz);
   scene.add(lampLight);
 }
 build();
 
-// ---------- Render loop ----------
 function animate() {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
