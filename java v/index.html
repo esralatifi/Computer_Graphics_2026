@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Java V - Cameras</title>
+        <style>
+            body { margin: 0; overflow: hidden; font-family: sans-serif; }
+            #scene canvas { display: block; }
+            #info {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.6);
+                color: #fff;
+                border-radius: 6px;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="scene"></div>
+        <div id="info">Camera: Perspective &nbsp;|&nbsp; press <b>C</b> to toggle</div>
+        <script type="module" src="index.js"></script>
+    </body>
+</html>
